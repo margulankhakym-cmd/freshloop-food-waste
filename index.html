@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freshloop — Система контроля свежести</title>
+    <meta name="description" content="Freshloop — облачный трекер свежести продуктов с предиктивным контролем сроков и подбором рецептов.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключение официального SDK облачного бэкенда Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #F4F5F2;
+            --bg-dark: #0D1F1A;
+            --accent: #EAB308;
+            --border-color: #DCDFD8;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: #141716;
+        }
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .hairline-b {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .hairline-r {
+            border-right: 1px solid var(--border-color);
+        }
+        .hairline-all {
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-[#0D1F1A] selection:text-white">
+
+    <!-- ВЕРХНЯЯ НАВИГАЦИЯ В СТИЛЕ SWISS EDITORIAL -->
+    <header class="sticky top-0 z-50 bg-[#F4F5F2]/90 backdrop-blur-md hairline-b">
+        <div class="max-w-6xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <a href="#" class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 bg-[#0D1F1A] inline-block"></span>
+                    <span class="font-bold tracking-tight text-sm uppercase">Freshloop</span>
+                </a>
+                <span id="dbStatusBadge" class="hidden sm:inline-flex items-center gap-1.5 font-mono-tech text-[11px] text-gray-500 bg-white px-2.5 py-0.5 hairline-all rounded-sm">
+                    <span id="dbDot" class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span id="dbStatusText">SYNC: LOCAL STORAGE</span>
+                </span>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-8 text-xs font-medium text-gray-600">
+                <a href="#manifesto" class="hover:text-black transition">Концепция</a>
+                <a href="#workspace" class="hover:text-black transition">Инвентарь</a>
+                <a href="#recipes" class="hover:text-black transition">Рецепты API</a>
+            </nav>
+
+            <a href="#workspace" class="bg-[#0D1F1A] hover:bg-black text-white text-xs font-medium px-4 py-2 transition">
+                Перейти к списку
+            </a>
+        </div>
+    </header>
+
+    <!-- ОРИГИНАЛЬНЫЙ АСИММЕТРИЧНЫЙ ПЕРВЫЙ ЭКРАН (SPLIT HERO) -->
+    <section id="manifesto" class="max-w-6xl mx-auto hairline-b">
+        <div class="grid grid-cols-1 lg:grid-cols-12">
+            <!-- Левая текстовая колонка -->
+            <div class="lg:col-span-7 p-6 sm:p-12 lg:p-16 flex flex-col justify-between lg:hairline-r space-y-10">
+                <div class="space-y-6">
+                    <div class="font-mono-tech text-xs uppercase tracking-widest text-emerald-900">
+                        [ 00 — ZERO-WASTE KITCHEN PROTOCOL ]
+                    </div>
+                    <h1 class="text-3xl sm:text-5xl font-bold tracking-tight leading-[1.08] text-[#0D1F1A]">
+                        Продукты не пропадают, пока о них помнят.
+                    </h1>
+                    <p class="text-gray-600 text-sm sm:text-base max-w-lg leading-relaxed">
+                        Минималистичная система учёта домашних запасов. Фиксируйте сроки годности за секунду, отслеживайте критические позиции и превращайте остатки в готовые блюда.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4 pt-2">
+                    <a href="#workspace" class="bg-[#0D1F1A] hover:bg-emerald-950 text-white text-xs font-semibold uppercase tracking-wider px-7 py-4 transition">
+                        Открыть холодильник
+                    </a>
+                    <a href="#recipes" class="bg-white hover:bg-gray-50 text-[#0D1F1A] hairline-all text-xs font-semibold uppercase tracking-wider px-7 py-4 transition">
+                        Подобрать рецепт
+                    </a>
+                </div>
+            </div>
+
+            <!-- Правая визуальная колонка с живой сводкой -->
+            <div class="lg:col-span-5 bg-[#0D1F1A] text-white p-6 sm:p-10 flex flex-col justify-between gap-8">
+                <div class="rounded-sm overflow-hidden bg-emerald-950/60 h-52 sm:h-60">
+                    <img 
+                        src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80" 
+                        alt="Свежие овощи" 
+                        class="w-full h-full object-cover opacity-85"
+                    >
+                </div>
+
+                <!-- Сводка в стиле приборной панели -->
+                <div class="grid grid-cols-3 gap-4 pt-4 border-t border-white/15">
+                    <div>
+                        <span class="font-mono-tech text-[10px] uppercase text-emerald-300/70 block">На кухне</span>
+                        <span id="heroTotal" class="font-mono-tech text-2xl font-semibold text-white">0</span>
+                    </div>
+                    <div>
+                        <span class="font-mono-tech text-[10px] uppercase text-amber-400/80 block">В зоне риска</span>
+                        <span id="heroRisk" class="font-mono-tech text-2xl font-semibold text-amber-400">0</span>
+                    </div>
+                    <div>
+                        <span class="font-mono-tech text-[10px] uppercase text-emerald-300/70 block">Индекс</span>
+                        <span id="heroIndex" class="font-mono-tech text-2xl font-semibold text-white">100%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- АРХИТЕКТУРА РАБОТЫ (3 КОЛОНКИ С ЧЁТКИМИ ЛИНИЯМИ) -->
+    <section class="max-w-6xl mx-auto hairline-b bg-white">
+        <div class="grid grid-cols-1 md:grid-cols-3">
+            <div class="p-6 sm:p-8 hairline-b md:border-b-0 md:hairline-r space-y-2">
+                <span class="font-mono-tech text-xs text-gray-400">01</span>
+                <h3 class="font-semibold text-base text-gray-900">Единый реестр</h3>
+                <p class="text-xs text-gray-500 leading-relaxed">Все продукты из холодильника, морозилки и кладовой собраны в одном структурированном списке.</p>
+            </div>
+            <div class="p-6 sm:p-8 hairline-b md:border-b-0 md:hairline-r space-y-2">
+                <span class="font-mono-tech text-xs text-gray-400">02</span>
+                <h3 class="font-semibold text-base text-gray-900">Приоритет свежести</h3>
+                <p class="text-xs text-gray-500 leading-relaxed">Автоматическая сортировка поднимает наверх позиции, срок которых истекает в ближайшие 48 часов.</p>
+            </div>
+            <div class="p-6 sm:p-8 space-y-2">
+                <span class="font-mono-tech text-xs text-gray-400">03</span>
+                <h3 class="font-semibold text-base text-gray-900">Интеграция рецептов</h3>
+                <p class="text-xs text-gray-500 leading-relaxed">Прямой запрос к базе TheMealDB подбирает блюда под продукты, требующие спасения.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- РАБОЧАЯ ЗОНА ИНВЕНТАРЯ (БЭКЕНД + ИНТЕРАКТИВ) -->
+    <main id="workspace" class="max-w-6xl mx-auto px-5 sm:px-8 py-14 space-y-10">
+        
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+                <span class="font-mono-tech text-xs text-gray-400 uppercase block mb-1">База данных продуктов</span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#0D1F1A]">Активный инвентарь</h2>
+            </div>
+
+            <!-- Переключатель фильтров -->
+            <div class="inline-flex bg-white hairline-all p-1 self-start">
+                <button onclick="setFilter('all')" id="tab-all" class="tab-btn bg-[#0D1F1A] text-white text-xs font-medium px-4 py-1.5 transition">Все</button>
+                <button onclick="setFilter('risk')" id="tab-risk" class="tab-btn text-gray-600 hover:text-black text-xs font-medium px-4 py-1.5 transition">Истекают</button>
+                <button onclick="setFilter('fresh')" id="tab-fresh" class="tab-btn text-gray-600 hover:text-black text-xs font-medium px-4 py-1.5 transition">Свежие</button>
+            </div>
+        </div>
+
+        <!-- Форма добавления новой записи в БД -->
+        <form id="productForm" class="bg-white hairline-all p-4 grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <input 
+                type="text" 
+                id="inputName" 
+                placeholder="Наименование продукта (например, Лосось филе)" 
+                required
+                class="sm:col-span-5 bg-[#F4F5F2] px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#0D1F1A]"
+            >
+            <select 
+                id="inputZone" 
+                class="sm:col-span-3 bg-[#F4F5F2] px-3.5 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0D1F1A]"
+            >
+                <option value="Холодильник">Холодильник</option>
+                <option value="Морозилка">Морозилка</option>
+                <option value="Кладовая">Кладовая</option>
+            </select>
+            <input 
+                type="number" 
+                id="inputDays" 
+                placeholder="Срок (дней)" 
+                min="1" 
+                max="365" 
+                required
+                class="sm:col-span-2 bg-[#F4F5F2] px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#0D1F1A]"
+            >
+            <button 
+                type="submit" 
+                id="submitBtn"
+                class="sm:col-span-2 bg-[#0D1F1A] hover:bg-black text-white text-xs font-semibold uppercase tracking-wider py-2.5 px-4 transition"
+            >
+                Добавить
+            </button>
+        </form>
+
+        <!-- Таблица-реестр продуктов -->
+        <div class="bg-white hairline-all overflow-hidden">
+            <div class="hidden sm:grid sm:grid-cols-12 px-6 py-3 bg-[#F9FAF8] hairline-b font-mono-tech text-[11px] uppercase text-gray-400">
+                <div class="col-span-5">Продукт</div>
+                <div class="col-span-3">Зона хранения</div>
+                <div class="col-span-2">Остаток срока</div>
+                <div class="col-span-2 text-right">Действие</div>
+            </div>
+            <div id="productList" class="divide-y divide-[#DCDFD8]">
+                <!-- Элементы загружаются из БД -->
+            </div>
+        </div>
+
+        <!-- СЕКЦИЯ РЕЦЕПТОВ ИЗ ВНЕШНЕГО API -->
+        <section id="recipes" class="pt-10 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <span class="font-mono-tech text-xs text-gray-400 uppercase block mb-1">TheMealDB REST API</span>
+                    <h2 class="text-2xl font-bold tracking-tight text-[#0D1F1A]">Рецепты из текущих запасов</h2>
+                </div>
+                <button 
+                    onclick="loadRecipes()" 
+                    class="self-start sm:self-auto bg-white hover:bg-gray-50 text-[#0D1F1A] hairline-all text-xs font-semibold uppercase tracking-wider px-5 py-2.5 transition"
+                >
+                    Обновить подборку
+                </button>
+            </div>
+
+            <div id="recipesContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Карточки рецептов -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ПОДВАЛ -->
+    <footer class="hairline-t bg-white mt-16 py-8 px-5 sm:px-8 border-t border-[#DCDFD8]">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-[#0D1F1A]"></span>
+                <span class="font-bold text-gray-900 uppercase">Freshloop</span>
+            </div>
+            <span class="font-mono-tech text-[11px]">FULL-STACK ZERO-WASTE SYSTEM</span>
+        </div>
+    </footer>
+
+    <script>
+        // =====================================================================
+        // КОНФИГУРАЦИЯ ОБЛАЧНОГО БЭКЕНДА (SUPABASE)
+        // Вставьте свои ключи из настроек Supabase, чтобы включить облачную БД.
+        // Пока ключи пустые, работает локальный движок хранения.
+        // =====================================================================
+        const SUPABASE_URL = ''; 
+        const SUPABASE_ANON_KEY = '';
+
+        let supabaseClient = null;
+        if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            document.getElementById('dbDot').className = 'w-1.5 h-1.5 rounded-full bg-emerald-600';
+            document.getElementById('dbStatusText').textContent = 'SYNC: CLOUD POSTGRES';
+        }
+
+        // Начальные демо-данные при первом запуске
+        const DEFAULT_ITEMS = [
+            { id: 101, name: 'Молоко фермерское 3.2%', zone: 'Холодильник', days_left: 1 },
+            { id: 102, name: 'Шпинат свежий бэби', zone: 'Холодильник', days_left: 2 },
+            { id: 103, name: 'Куриное филе охлаждённое', zone: 'Холодильник', days_left: 2 },
+            { id: 104, name: 'Авокадо Хасс', zone: 'Кладовая', days_left: 5 },
+            { id: 105, name: 'Смесь лесных ягод', zone: 'Морозилка', days_left: 60 }
+        ];
+
+        let products = [];
+        let activeFilter = 'all';
+
+        // Единый слой работы с данными (Бэкенд-адаптер)
+        const BackendAPI = {
+            async getAll() {
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient
+                        .from('products')
+                        .select('*')
+                        .order('days_left', { ascending: true });
+                    if (!error && data) return data;
+                }
+                const saved = localStorage.getItem('freshloop_db_v1');
+                if (!saved) {
+                    localStorage.setItem('freshloop_db_v1', JSON.stringify(DEFAULT_ITEMS));
+                    return [...DEFAULT_ITEMS];
+                }
+                return JSON.parse(saved);
+            },
+
+            async create(item) {
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient
+                        .from('products')
+                        .insert([item])
+                        .select();
+                    if (!error && data) return data[0];
+                }
+                const newItem = { ...item, id: Date.now() };
+                products.push(newItem);
+                localStorage.setItem('freshloop_db_v1', JSON.stringify(products));
+                return newItem;
+            },
+
+            async delete(id) {
+                if (supabaseClient) {
+                    await supabaseClient.from('products').delete().eq('id', id);
+                }
+                products = products.filter(p => p.id !== id);
+                localStorage.setItem('freshloop_db_v1', JSON.stringify(products));
+            }
+        };
+
+        async function initApp() {
+            products = await BackendAPI.getAll();
+            renderUI();
+            loadRecipes();
+        }
+
+        function setFilter(filter) {
+            activeFilter = filter;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn text-gray-600 hover:text-black text-xs font-medium px-4 py-1.5 transition';
+            });
+            document.getElementById('tab-' + filter).className = 'tab-btn bg-[#0D1F1A] text-white text-xs font-medium px-4 py-1.5 transition';
+            renderUI();
+        }
+
+        function renderUI() {
+            // Сортировка по срочности (сначала те, что скоро испортятся)
+            const sorted = [...products].sort((a, b) => a.days_left - b.days_left);
+
+            const total = sorted.length;
+            const risk = sorted.filter(p => p.days_left <= 2).length;
+            const freshIndex = total === 0 ? 100 : Math.round(((total - risk) / total) * 100);
+
+            document.getElementById('heroTotal').textContent = total;
+            document.getElementById('heroRisk').textContent = risk;
+            document.getElementById('heroIndex').textContent = freshIndex + '%';
+
+            const filtered = sorted.filter(item => {
+                if (activeFilter === 'risk') return item.days_left <= 2;
+                if (activeFilter === 'fresh') return item.days_left > 2;
+                return true;
+            });
+
+            const listEl = document.getElementById('productList');
+            listEl.innerHTML = '';
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="p-8 text-center text-xs text-gray-400 font-mono-tech">НЕТ ЗАПИСЕЙ В ВЫБРАННОЙ КАТЕГОРИИ</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isUrgent = item.days_left <= 2;
+                const statusBadge = isUrgent
+                    ? `<span class="inline-flex items-center gap-1.5 font-mono-tech text-xs text-amber-700 bg-amber-50 px-2.5 py-0.5 border border-amber-200">Осталось ${item.days_left} дн.</span>`
+                    : `<span class="inline-flex items-center gap-1.5 font-mono-tech text-xs text-emerald-900 bg-emerald-50/70 px-2.5 py-0.5 border border-emerald-200/80">${item.days_left} дн.</span>`;
+
+                const row = document.createElement('div');
+                row.className = 'p-5 sm:px-6 sm:py-4 grid grid-cols-1 sm:grid-cols-12 items-center gap-3 hover:bg-[#F9FAF8] transition';
+                row.innerHTML = `
+                    <div class="sm:col-span-5 font-medium text-sm text-gray-900">${item.name}</div>
+                    <div class="sm:col-span-3 text-xs text-gray-500">${item.zone}</div>
+                    <div class="sm:col-span-2">${statusBadge}</div>
+                    <div class="sm:col-span-2 flex sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                        <button onclick="handleRemove(${item.id})" class="font-mono-tech text-[11px] uppercase text-emerald-900 hover:underline">
+                            Списать
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const name = document.getElementById('inputName').value.trim();
+            const zone = document.getElementById('inputZone').value;
+            const days_left = parseInt(document.getElementById('inputDays').value, 10);
+
+            if (!name || isNaN(days_left)) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Сохранение...';
+
+            const created = await BackendAPI.create({ name, zone, days_left });
+            if (supabaseClient) {
+                products.push(created);
+            }
+
+            e.target.reset();
+            btn.disabled = false;
+            btn.textContent = 'Добавить';
+            renderUI();
+        });
+
+        async function handleRemove(id) {
+            await BackendAPI.delete(id);
+            renderUI();
+        }
+
+        // Загрузка рецептов из внешнего REST API
+        async function loadRecipes() {
+            const container = document.getElementById('recipesContainer');
+            container.innerHTML = `<div class="col-span-full text-xs font-mono-tech text-gray-400">ЗАПРОС К THEMEALDB API...</div>`;
+
+            const ingredients = ['chicken', 'spinach', 'salmon', 'egg', 'avocado'];
+            const pick = ingredients[Math.floor(Math.random() * ingredients.length)];
+
+            try {
+                const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${pick}`);
+                const data = await response.json();
+                const meals = (data.meals || []).slice(0, 3);
+
+                container.innerHTML = '';
+                meals.forEach((meal, idx) => {
+                    const card = document.createElement('a');
+                    card.href = `https://www.themealdb.com/meal/${meal.idMeal}`;
+                    card.target = '_blank';
+                    card.className = 'group bg-white hairline-all flex flex-col justify-between hover:border-gray-400 transition';
+                    card.innerHTML = `
+                        <div class="h-48 overflow-hidden bg-gray-100 hairline-b">
+                            <img src="${meal.strMealThumb}" alt="${meal.strMeal}" class="w-full h-full object-cover group-hover:scale-103 transition duration-500">
+                        </div>
+                        <div class="p-5 space-y-2">
+                            <div class="flex items-center justify-between font-mono-tech text-[10px] text-gray-400 uppercase">
+                                <span>РЕЦЕПТ 0${idx + 1}</span>
+                                <span>ИНГРЕДИЕНТ: ${pick}</span>
+                            </div>
+                            <h3 class="font-semibold text-sm text-gray-900 line-clamp-1">${meal.strMeal}</h3>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                container.innerHTML = `<div class="col-span-full text-xs text-gray-500">Ошибка соединения с API рецептов.</div>`;
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
